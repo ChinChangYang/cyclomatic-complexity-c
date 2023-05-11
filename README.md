@@ -1,71 +1,32 @@
-# cyclomatic-complexity-c README
+# Cyclomatic Complexity Calculator for C - Visual Studio Code Extension
 
-This is the README for your extension "cyclomatic-complexity-c". After writing up a brief description, we recommend including the following sections.
+This Visual Studio Code extension calculates the Cyclomatic Complexity of C functions directly in your editor, providing a quick and easy way to assess the complexity and maintainability of your code.
 
 ## Features
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
+- Real-time Cyclomatic Complexity calculation: The extension automatically calculates the Cyclomatic Complexity of your C functions as you code.
+- Cyclomatic Complexity display with CodeLens: The calculated Cyclomatic Complexity is displayed above each function using CodeLens.
 
-For example if there is an image subfolder under your extension project workspace:
+## How to Install
 
-\!\[feature X\]\(images/feature-x.png\)
+1. Download the extension from the Visual Studio Code Marketplace.
+2. Install it in your Visual Studio Code.
+3. The extension will be automatically activated when you open a C file.
 
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+## How to Use
 
-## Requirements
+Once you've installed the extension, simply open a C file in Visual Studio Code. The extension will automatically calculate and display the Cyclomatic Complexity for each function in your code.
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+## Development
 
-## Extension Settings
+This project is built using TypeScript for the extension itself and Python for the C code parsing and Cyclomatic Complexity calculation.
 
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
+You can run the tests for the Cyclomatic Complexity calculation with the provided Python script (`src/ccctest.py`).
 
-For example:
+## Contributing
 
-This extension contributes the following settings:
+We welcome contributions! Please see the [contributing guide](CONTRIBUTING.md) for more details.
 
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
+## License
 
-## Known Issues
-
-Calling out known issues can help limit users opening duplicate issues against your extension.
-
-## Release Notes
-
-Users appreciate release notes as you update your extension.
-
-### 1.0.0
-
-Initial release of ...
-
-### 1.0.1
-
-Fixed issue #.
-
-### 1.1.0
-
-Added features X, Y, and Z.
-
----
-
-## Following extension guidelines
-
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
-
-* [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
-
-## Working with Markdown
-
-You can author your README using Visual Studio Code. Here are some useful editor keyboard shortcuts:
-
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
-
-## For more information
-
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
-
-**Enjoy!**
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
