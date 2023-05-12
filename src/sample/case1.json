@@ -1,0 +1,7 @@
+[
+    { "line": 0, "complexity": 1 },
+    { "line": 2, "complexity": 2 },
+    { "line": 6, "complexity": 3 },
+    { "line": 11, "complexity": 2 },
+    { "line": 15, "complexity": 3 }
+]

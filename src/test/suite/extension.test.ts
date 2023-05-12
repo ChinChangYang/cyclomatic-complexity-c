@@ -1,15 +1,44 @@
 import * as assert from 'assert';
-
-// You can import and use all API from the 'vscode' module
-// as well as import your extension to test it
 import * as vscode from 'vscode';
-// import * as myExtension from '../../extension';
+import * as fs from 'fs';
+import * as path from 'path';
 
 suite('Extension Test Suite', () => {
-	vscode.window.showInformationMessage('Start all tests.');
+    vscode.window.showInformationMessage('Start all tests.');
 
-	test('Sample test', () => {
-		assert.strictEqual(-1, [1, 2, 3].indexOf(5));
-		assert.strictEqual(-1, [1, 2, 3].indexOf(0));
-	});
+    test('Cyclomatic Complexity Calculation Test', async () => {
+        const testCaseName = 'case1';
+        const expectedResultsPath = path.join(__dirname, `../../../src/sample/${testCaseName}.json`);
+        const expectedResults = JSON.parse(fs.readFileSync(expectedResultsPath, 'utf-8'));
+
+        const uri = vscode.Uri.file(
+            path.join(__dirname, `../../../src/sample/${testCaseName}.c`)
+        );
+
+        const document = await vscode.workspace.openTextDocument(uri);
+
+        const codeLenses = await vscode.commands.executeCommand<vscode.CodeLens[]>(
+            'vscode.executeCodeLensProvider',
+            document.uri
+        );
+
+        assert.strictEqual(codeLenses.length,
+            expectedResults.length,
+            'Number of CodeLens objects does not match expected');
+
+        for (let i = 0; i < expectedResults.length; i++) {
+            const expectedResult = expectedResults[i];
+
+            const matchingCodeLens = codeLenses
+                .find(cl => cl.range.start.line === expectedResult.line);
+
+            assert.ok(matchingCodeLens, `No CodeLens found for line ${expectedResult.line}`);
+
+            const complexityString = matchingCodeLens.command?.title.split(' ').find(s => !isNaN(Number(s)));
+            assert.ok(complexityString, 'Complexity string not found in CodeLens command title');
+
+            const complexity = Number(complexityString);
+            assert.strictEqual(complexity, expectedResult.complexity);
+        }
+    });
 });
