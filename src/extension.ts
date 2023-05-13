@@ -1,27 +1,36 @@
 import * as vscode from 'vscode';
-import { spawnSync } from 'child_process';
+import { spawn } from 'child_process';
+import path = require('path');
 
 export function activate(context: vscode.ExtensionContext) {
     // Register the CodeLens provider
-    let provider = new CyclomaticComplexityCodeLensProvider();
-    let providerDisposable = vscode.languages.registerCodeLensProvider({ language: 'c', scheme: 'file' }, provider);
+    const provider = new CyclomaticComplexityCodeLensProvider();
+    const providerDisposable = vscode.languages.registerCodeLensProvider({ language: 'c', scheme: 'file' }, provider);
     context.subscriptions.push(providerDisposable);
 }
 
 class CyclomaticComplexityCodeLensProvider implements vscode.CodeLensProvider {
-    provideCodeLenses(document: vscode.TextDocument): vscode.CodeLens[] {
-        // Spawn a new process to run your script
-        const script = spawnSync('python', ['path/to/ccc.py', document.fileName]);
-        const output = script.stdout.toString();
-    
+    async provideCodeLenses(document: vscode.TextDocument): Promise<vscode.CodeLens[]> {
+        const cwd = path.join(__dirname, "../src/ccc");
+        const script = spawn('./ccc', [document.fileName], { cwd: cwd });
+
+        // Wait for the script to finish and get its output
+        const output = await new Promise<string>((resolve, reject) => {
+            let stdout = '';
+            script.stdout.on('data', chunk => stdout += chunk);
+            script.stderr.on('data', chunk => console.error(chunk.toString()));
+            script.on('error', reject);
+            script.on('close', code => code === 0 ? resolve(stdout) : reject(`ccc exited with code ${code}`));
+        });
+
         // Parse the output and create a CodeLens for each function
-        let codeLenses = [];
-        for (let line of output.split('\n')) {
+        const codeLenses = [];
+        for (const line of output.split('\n')) {
             if (line.trim() !== '') { // Ignore empty or invalid lines
                 const [functionLine, complexity] = line.split(' ');
                 const codeLensLine = Math.max(Number(functionLine) - 1, 0);
-                let range = new vscode.Range(codeLensLine, 0, codeLensLine, 0);
-                let command = {
+                const range = new vscode.Range(codeLensLine, 0, codeLensLine, 0);
+                const command = {
                     title: `Cyclomatic Complexity: ${complexity}`,
                     command: ''
                 };
