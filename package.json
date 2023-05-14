@@ -3,6 +3,10 @@
   "displayName": "Cyclomatic Complexity C",
   "description": "Cyclomatic Complexity of C function",
   "version": "0.0.1",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ChinChangYang/cyclomatic-complexity-c.git"
+  },
   "engines": {
     "vscode": "^1.78.0"
   },
@@ -13,14 +17,6 @@
     "onLanguage:c"
   ],
   "main": "./out/extension.js",
-  "contributes": {
-    "commands": [
-      {
-        "command": "cyclomatic-complexity-c.helloWorld",
-        "title": "Hello World"
-      }
-    ]
-  },
   "scripts": {
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",

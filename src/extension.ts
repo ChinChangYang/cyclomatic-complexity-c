@@ -1,29 +1,42 @@
 import * as vscode from 'vscode';
 import { spawn } from 'child_process';
 import path = require('path');
+import os = require('os');
+import fs = require('fs');
 
 export function activate(context: vscode.ExtensionContext) {
-    // Register the CodeLens provider
     const provider = new CyclomaticComplexityCodeLensProvider();
     const providerDisposable = vscode.languages.registerCodeLensProvider({ language: 'c', scheme: 'file' }, provider);
     context.subscriptions.push(providerDisposable);
 }
 
 class CyclomaticComplexityCodeLensProvider implements vscode.CodeLensProvider {
+    cccPath = path.join(os.homedir(), '.cyclomatic_complexity_c', 'ccc');
+
     async provideCodeLenses(document: vscode.TextDocument): Promise<vscode.CodeLens[]> {
-        const cwd = path.join(__dirname, "../src/ccc");
-        const script = spawn('./ccc', [document.fileName], { cwd: cwd });
+        if (!fs.existsSync(this.cccPath)) {
+            vscode.window.showErrorMessage('The "ccc" binary could not be found. Please follow the instructions in the README to build and install "ccc".');
+            return [];
+        }
+
+        const output = await this.getScriptOutput(document.fileName);
+        return this.createCodeLensesFromOutput(output);
+    }    
+
+    private getScriptOutput(fileName: string): Promise<string> {
+        const script = spawn(this.cccPath, [fileName]);
 
         // Wait for the script to finish and get its output
-        const output = await new Promise<string>((resolve, reject) => {
+        return new Promise<string>((resolve, reject) => {
             let stdout = '';
             script.stdout.on('data', chunk => stdout += chunk);
             script.stderr.on('data', chunk => console.error(chunk.toString()));
             script.on('error', reject);
             script.on('close', code => code === 0 ? resolve(stdout) : reject(`ccc exited with code ${code}`));
         });
+    }
 
-        // Parse the output and create a CodeLens for each function
+    private createCodeLensesFromOutput(output: string): vscode.CodeLens[] {
         const codeLenses = [];
         for (const line of output.split('\n')) {
             if (line.trim() !== '') { // Ignore empty or invalid lines
@@ -38,10 +51,5 @@ class CyclomaticComplexityCodeLensProvider implements vscode.CodeLensProvider {
             }
         }
         return codeLenses;
-    }    
-
-    resolveCodeLens(codeLens: vscode.CodeLens): vscode.CodeLens {
-        // The command has already been set in provideCodeLenses, so we don't need to do anything here
-        return codeLens;
     }
 }
