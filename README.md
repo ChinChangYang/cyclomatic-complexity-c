@@ -19,9 +19,21 @@ Once you've installed the extension, simply open a C file in Visual Studio Code.
 
 ## Development
 
-This project is built using TypeScript for the extension itself and Python for the C code parsing and Cyclomatic Complexity calculation.
+This project is built using TypeScript for the extension itself and a C++ program for the C code parsing and Cyclomatic Complexity calculation. The C++ program utilizes Clang's AST (Abstract Syntax Tree) traversal and has replaced the previous Python script to reduce dependency on Python.
 
-You can run the tests for the Cyclomatic Complexity calculation with the provided Python script (`src/ccctest.py`).
+During development, I encountered several build issues with the C++ program, which were resolved by executing the following command:
+
+```bash
+g++ ccc.cpp -o ccc $(llvm-config --cxxflags) $(llvm-config --ldflags) -lclang $(llvm-config --libs --system-libs)
+```
+
+This command uses `llvm-config` to get the appropriate flags and libraries required to compile the C++ program with Clang libraries.
+
+You can run the tests for the Cyclomatic Complexity calculation with the provided C++ program (`src/ccc/ccc.cpp`).
+
+## Known Issues
+
+In case you face any errors during the execution of the extension, please check the "Output" tab in Visual Studio Code, which will provide information on potential issues.
 
 ## Contributing
 
