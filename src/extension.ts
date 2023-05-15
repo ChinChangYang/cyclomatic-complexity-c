@@ -19,12 +19,16 @@ class CyclomaticComplexityCodeLensProvider implements vscode.CodeLensProvider {
             return [];
         }
 
-        const output = await this.getScriptOutput(document.fileName);
+        const output = await this.getScriptOutput(document);
         return this.createCodeLensesFromOutput(output);
     }    
 
-    private getScriptOutput(fileName: string): Promise<string> {
-        const script = spawn(this.cccPath, [fileName]);
+    private async getScriptOutput(document: vscode.TextDocument): Promise<string> {
+        const script = spawn(this.cccPath);
+
+        // Write the content of the current file to the ccc program
+        script.stdin.write(document.getText());
+        script.stdin.end();
 
         // Wait for the script to finish and get its output
         return new Promise<string>((resolve, reject) => {

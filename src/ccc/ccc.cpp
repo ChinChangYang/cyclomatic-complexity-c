@@ -40,16 +40,29 @@ int compute_cyclomatic_complexity(CXCursor cursor) {
     return edges - nodes + 2;
 }
 
-int main(int argc, char** argv) {
-    if (argc < 2) {
-        std::cerr << "Usage: " << argv[0] << " <source_file>" << std::endl;
-        return 1;
+std::string readSourceCode() {
+    return std::string((std::istreambuf_iterator<char>(std::cin)), std::istreambuf_iterator<char>());
+}
+
+CXUnsavedFile createUnsavedFile(const std::string& code) {
+    CXUnsavedFile unsaved_file;
+    unsaved_file.Filename = "unsaved.c";
+    unsaved_file.Contents = code.c_str();
+    unsaved_file.Length = code.length();
+    return unsaved_file;
+}
+
+CXTranslationUnit parseTranslationUnit(CXIndex index, CXUnsavedFile* unsaved_file) {
+    CXTranslationUnit TU;
+    CXErrorCode error = clang_parseTranslationUnit2(index, "unsaved.c", nullptr, 0, unsaved_file, 1, CXTranslationUnit_None, &TU);
+    if (error != CXError_Success) {
+        std::cerr << "Error: Unable to parse translation unit.\n";
+        exit(1);
     }
+    return TU;
+}
 
-    CXIndex index = clang_createIndex(0, 0);
-    CXTranslationUnit translation_unit = clang_createTranslationUnitFromSourceFile(index, argv[1], 0, NULL, 0, NULL);
-
-    CXCursor root_cursor = clang_getTranslationUnitCursor(translation_unit);
+void visitChildren(CXCursor root_cursor) {
     clang_visitChildren(root_cursor,
         [](CXCursor cursor, CXCursor parent, CXClientData client_data) -> CXChildVisitResult {
             if (clang_getCursorKind(cursor) == CXCursor_FunctionDecl) {
@@ -63,8 +76,19 @@ int main(int argc, char** argv) {
         },
         nullptr
     );
+}
 
-    clang_disposeTranslationUnit(translation_unit);
+int main() {
+    std::string code = readSourceCode();
+    CXUnsavedFile unsaved_file = createUnsavedFile(code);
+    
+    CXIndex index = clang_createIndex(0, 0);
+    CXTranslationUnit TU = parseTranslationUnit(index, &unsaved_file);
+    
+    CXCursor root_cursor = clang_getTranslationUnitCursor(TU);
+    visitChildren(root_cursor);
+    
+    clang_disposeTranslationUnit(TU);
     clang_disposeIndex(index);
     return 0;
 }
