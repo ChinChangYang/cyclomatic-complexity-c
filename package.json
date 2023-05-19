@@ -3,6 +3,7 @@
   "displayName": "Cyclomatic Complexity C",
   "description": "Cyclomatic Complexity of C function",
   "version": "0.0.1",
+  "publisher": "ChinChangYang",
   "repository": {
     "type": "git",
     "url": "https://github.com/ChinChangYang/cyclomatic-complexity-c.git"
