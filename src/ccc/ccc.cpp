@@ -7,43 +7,98 @@
 
 const std::vector<CXCursorKind> decision_kinds = {
     CXCursor_IfStmt, CXCursor_ForStmt, CXCursor_WhileStmt, CXCursor_DefaultStmt,
-    CXCursor_CaseStmt};
+    CXCursor_CaseStmt, CXCursor_ConditionalOperator, CXCursor_BinaryOperator};
 
-std::pair<int, int> count_edges_and_nodes(CXCursor cursor)
+static CXCursor getFirstChild(CXCursor parentCursor)
 {
-    int edges = 0;
-    int nodes = 0;
-
-    if (std::find(decision_kinds.begin(), decision_kinds.end(),
-                  clang_getCursorKind(cursor)) != decision_kinds.end())
-    {
-        edges += 2;
-        nodes += 1;
-    }
-
-    std::pair<int, int> edgeNodePair(edges, nodes);
-
+    CXCursor childCursor = clang_getNullCursor();
     clang_visitChildren(
-        cursor,
-        [](CXCursor child, CXCursor parent,
-           CXClientData client_data) -> CXChildVisitResult
+        parentCursor,
+        [](CXCursor c, CXCursor parent, CXClientData client_data)
         {
-            auto counts = count_edges_and_nodes(child);
-            static_cast<std::pair<int, int> *>(client_data)->first += counts.first;
-            static_cast<std::pair<int, int> *>(client_data)->second +=
-                counts.second;
-            return CXChildVisit_Continue;
+            CXCursor *cursor = static_cast<CXCursor *>(client_data);
+            *cursor = c;
+            return CXChildVisit_Break;
         },
-        &edgeNodePair);
+        &childCursor);
 
-    return edgeNodePair;
+    return childCursor;
 }
 
-int compute_cyclomatic_complexity(CXCursor cursor)
+std::string getBinaryOperator(CXTranslationUnit translationUnit, CXCursor expressionCursor)
 {
-    auto counts = count_edges_and_nodes(cursor);
+    CXToken *expressionTokens;
+    unsigned numExpressionTokens;
+    clang_tokenize(translationUnit, clang_getCursorExtent(expressionCursor),
+                   &expressionTokens, &numExpressionTokens);
+
+    CXCursor leftHandSideCursor = getFirstChild(expressionCursor);
+    CXToken *leftHandSideTokens;
+    unsigned numLeftHandSideTokens;
+    clang_tokenize(translationUnit, clang_getCursorExtent(leftHandSideCursor),
+                   &leftHandSideTokens, &numLeftHandSideTokens);
+
+    CXString operatorString = clang_getTokenSpelling(translationUnit,
+                                                     expressionTokens[numLeftHandSideTokens]);
+    std::string operatorSymbol(clang_getCString(operatorString));
+
+    clang_disposeString(operatorString);
+    clang_disposeTokens(translationUnit, leftHandSideTokens, numLeftHandSideTokens);
+    clang_disposeTokens(translationUnit, expressionTokens, numExpressionTokens);
+
+    return operatorSymbol;
+}
+
+struct EdgeAndNodeCounter
+{
+    CXTranslationUnit translationUnit;
+    int edges = 0;
+    int nodes = 0;
+};
+
+CXChildVisitResult countEdgesAndNodesCallback(CXCursor cursor, CXCursor parent, CXClientData clientData)
+{
+    EdgeAndNodeCounter *counter = static_cast<EdgeAndNodeCounter *>(clientData);
+
+    const CXCursorKind cursorKind = clang_getCursorKind(cursor);
+    if (std::find(decision_kinds.begin(), decision_kinds.end(), cursorKind) != decision_kinds.end())
+    {
+        if (cursorKind == CXCursor_BinaryOperator)
+        {
+            std::string operatorSymbol = getBinaryOperator(counter->translationUnit, cursor);
+            if (operatorSymbol == "&&" || operatorSymbol == "||")
+            {
+                counter->edges += 2;
+                counter->nodes += 1;
+            }
+        }
+        else
+        {
+            counter->edges += 2;
+            counter->nodes += 1;
+        }
+    }
+
+    clang_visitChildren(cursor, countEdgesAndNodesCallback, clientData);
+
+    return CXChildVisit_Continue;
+}
+
+std::pair<int, int> countEdgesAndNodes(CXCursor cursor, CXTranslationUnit translationUnit)
+{
+    EdgeAndNodeCounter counter;
+    counter.translationUnit = translationUnit;
+
+    countEdgesAndNodesCallback(cursor, clang_getNullCursor(), &counter);
+
+    return {counter.edges, counter.nodes};
+}
+
+int computeCyclomaticComplexity(CXCursor cursor, CXTranslationUnit translationUnit)
+{
+    auto counts = countEdgesAndNodes(cursor, translationUnit);
     const int edges = counts.first;
-    const int nodes = counts.second + 1; // +1 for the function entry node
+    const int nodes = counts.second + 1;
     return edges - nodes + 2;
 }
 
@@ -77,24 +132,34 @@ CXTranslationUnit parseTranslationUnit(CXIndex index,
     return TU;
 }
 
-void visitChildren(CXCursor root_cursor)
+struct ChildVisitor
 {
+    CXTranslationUnit cxTU;
+};
+
+CXChildVisitResult visitChildren_callback(CXCursor cursor, CXCursor parent, CXClientData client_data)
+{
+    ChildVisitor *visitor = static_cast<ChildVisitor *>(client_data);
+
+    if (clang_getCursorKind(cursor) == CXCursor_FunctionDecl)
+    {
+        CXSourceLocation location = clang_getCursorLocation(cursor);
+        unsigned line, column;
+        clang_getSpellingLocation(location, NULL, &line, &column, NULL);
+        int complexity = computeCyclomaticComplexity(cursor, visitor->cxTU);
+        std::cout << line << " " << complexity << std::endl;
+    }
+
+    return CXChildVisit_Continue;
+}
+
+void visitChildren(CXCursor root_cursor, CXTranslationUnit TU)
+{
+    ChildVisitor visitor;
+    visitor.cxTU = TU;
+
     clang_visitChildren(
-        root_cursor,
-        [](CXCursor cursor, CXCursor parent,
-           CXClientData client_data) -> CXChildVisitResult
-        {
-            if (clang_getCursorKind(cursor) == CXCursor_FunctionDecl)
-            {
-                CXSourceLocation location = clang_getCursorLocation(cursor);
-                unsigned line, column;
-                clang_getSpellingLocation(location, NULL, &line, &column, NULL);
-                int complexity = compute_cyclomatic_complexity(cursor);
-                std::cout << line << " " << complexity << std::endl;
-            }
-            return CXChildVisit_Continue;
-        },
-        nullptr);
+        root_cursor, visitChildren_callback, &visitor);
 }
 
 int main()
@@ -106,7 +171,7 @@ int main()
     CXTranslationUnit TU = parseTranslationUnit(index, &unsaved_file);
 
     CXCursor root_cursor = clang_getTranslationUnitCursor(TU);
-    visitChildren(root_cursor);
+    visitChildren(root_cursor, TU);
 
     clang_disposeTranslationUnit(TU);
     clang_disposeIndex(index);
