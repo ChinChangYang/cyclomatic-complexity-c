@@ -3,5 +3,11 @@
     { "line": 2, "complexity": 2 },
     { "line": 6, "complexity": 3 },
     { "line": 11, "complexity": 2 },
-    { "line": 15, "complexity": 3 }
+    { "line": 15, "complexity": 3 },
+    { "line": 21, "complexity": 4 },
+    { "line": 29, "complexity": 2 },
+    { "line": 34, "complexity": 5 },
+    { "line": 40, "complexity": 2 },
+    { "line": 46, "complexity": 2 },
+    { "line": 55, "complexity": 2 }
 ]

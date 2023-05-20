@@ -24,7 +24,7 @@ suite('Extension Test Suite', () => {
 
         assert.strictEqual(codeLenses.length,
             expectedResults.length,
-            'Number of CodeLens objects does not match expected');
+            `Number of CodeLens objects (${codeLenses.length}) does not match expected (${expectedResults.length})`);
 
         for (let i = 0; i < expectedResults.length; i++) {
             const expectedResult = expectedResults[i];
@@ -35,10 +35,11 @@ suite('Extension Test Suite', () => {
             assert.ok(matchingCodeLens, `No CodeLens found for line ${expectedResult.line}`);
 
             const complexityString = matchingCodeLens.command?.title.split(' ').find(s => !isNaN(Number(s)));
-            assert.ok(complexityString, 'Complexity string not found in CodeLens command title');
+            assert.ok(complexityString, `Complexity string not found in CodeLens command title for line ${expectedResult.line}`);
 
             const complexity = Number(complexityString);
-            assert.strictEqual(complexity, expectedResult.complexity);
+            assert.strictEqual(complexity, expectedResult.complexity,
+                `For line ${expectedResult.line}: expected complexity (${expectedResult.complexity}) does not match calculated complexity (${complexity})`);
         }
     });
 });
